@@ -1,0 +1,151 @@
+
+@model proj01.Models.KalkulatorViewModel
+
+<p>@Model.IsEdit</p>
+<title>Kalkulator</title>
+<div>
+    <div class="row mb-3">
+        <div class="col-md-6 text-center"><h3>@(!Model.IsEdit ? "Apa yang kamu hitung hari ini" : "Edit Data Kalkulasi")</h3></div>
+    </div>
+    <!--form input-->
+    <form asp-controller="Kalkulator" asp-action="Hitung" method="post" class="d-flex justify-content-center w-100">
+    <input type="hidden" asp-for="FormModel.Id" />
+    <table class="text-center">
+        <tr>
+            <td>
+                <!--form pengisian angka 1-->
+                <div class="form-group mb-2">
+                    <input asp-for="FormModel.Angkasatu" placeholder="Masukan Angka Pertama" type="number" class="form-control" />
+                </div>
+                
+            </td>
+            <td class="px-2">
+                <!--form pengisian operasi -->
+                <div class="form-group mb-2">
+                    <select asp-for="FormModel.Operasi" class="form-select text-center" required>
+                        <col-md-4>
+                        <option value="">Pilih Operasi</option>
+                        <option value="+">Pertambahan</option>
+                        <option value="-">Pengurangan</option>
+                        <option value="*">Perkalian</option>
+                        <option value="/">Pembagian</option>
+                    </select>
+                </div>                
+            </td>
+            <td>
+                <!--form pengisian angka 2-->
+                <input asp-for="FormModel.Angkadua" placeholder="Masukan Angka Ke - 2" type="number" class="form-control" required>
+            </td>
+        </tr>
+        <tr>
+            <td></td>
+            <!--button hitung / update-->
+            <td class="pt-3">
+                <button type="submit" class="btn @(!Model.IsEdit ? "btn-primary":"btn-warning")">
+                    @(!Model.IsEdit ? "Hitung & Simpan":"Update Data")
+                </button>
+            </td>
+            <td></td>
+        </tr>
+    </table>
+    </form>
+    @if(Model.FormModel.Hasil != 0 || Model.FormModel.Id > 0)
+    {
+        <div class="alert alert-info mt-4 text-center">
+            <h4>Hasil : @Model.FormModel.Hasil</h4>
+        </div>
+    }
+    <hr class="my-5">
+    <!--tabel riwayat database-->
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <h4 class="text-center mb-3">Riwayat Perhitungan</h4>
+            <table class="table table-bordered table-striped text-center align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>No</th>
+                        <th>Angka 1</th>
+                        <th>Operasi</th>
+                        <th>Angka 2</th>
+                        <th>Hasil</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model?.DaftarRiwayat != null && Model.DaftarRiwayat.Count > 0)
+                    {
+                        int no = 1;
+                        foreach (var item in Model.DaftarRiwayat)
+                        {
+                            <tr class="@(item.Id == Model.FormModel.Id ? "table-warning" : "")">
+                                <td>@(no++)</td>
+                                <td>@item.Angkasatu</td>
+                                <td>@item.Operasi</td>
+                                <td>@item.Angkadua</td>
+                                <td><strong>@item.Hasil</strong></td>
+                                <td>
+                                <!--button edit / bataledit-->
+                                    @if (Model.IsEdit && (item.Id == Model.FormModel.Id))
+                                    {
+                                        <a asp-action="Hitung" class="btn btn-secondary btn-sm btn-batal">Batal Edit</a>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="Hitung" asp-route-id="@item.Id" class="btn btn-warning btn-sm">Edit</a>
+                                    }
+                                    <!--button hapus-->
+                                    <button type="button" class="btn btn-danger btn-sm btn-hapus" data-id="@item.Id">Hapus</button>
+                                </td>
+                            </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-muted">Belum ada data riwayatnya.</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!--skrip tombol delete-->
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            document.querySelectorAll('.btn-hapus').forEach(function (btn){
+                btn.addEventListener('click', async function (){
+                    var id = this.dataset.id;
+                    console.log('ID yang di kirim : ',  id);
+                    if(!confirm('Yakin ingin menghapus data ini?')) return;
+                    try{
+                        var response = await fetch('/Kalkulator/Hapus/'+ id, {
+                            method: 'DELETE',
+                            headers: {
+                                'RequestVerificationToken': getAntiForgeryToken()
+                            }
+                        });
+                        if(response.ok){
+                            //Berhasil -> refresh Halaman
+                            location.reload();
+                        }
+                        else if (response.status === 404){
+                            alert('Data Tidak Di Temukan' + id);
+                        }
+                        else {
+                            alert('Gagal menghapus data.status: '+ response.status);
+                        }
+                    }
+                    catch (err){
+                        alert('Terjadi Kesalahan: ' + err.message);
+                    }
+                });
+            });
+        });
+        //Ambil token anti forgery dari form yang ada di halaman
+        function getAntiForgeryToken(){
+            var input=document.querySelector('input[name="__RequestVerificationToken"]');
+            return input ? input.value:'';
+        }
+    </script>
+</div>
