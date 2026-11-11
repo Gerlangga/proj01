@@ -1,29 +1,31 @@
 using Microsoft.AspNetCore.Mvc;
 using proj01.Data;
 using proj01.Models;
+using proj01.DTOs.Kalkulator;
 using System.Linq;
+using proj01.Services.Interfaces;
 
-namespace proj01.Data
+namespace proj01.Controllers
 {
     public class KalkulatorController : Controller
     {
-        private readonly AppDbContext _context;
-        public KalkulatorController(AppDbContext context)
+        private readonly IKalkulatorService _kalkulatorService;
+        public KalkulatorController(IKalkulatorService kalkulatorService)
         {
-            _context = context;
+            _kalkulatorService = kalkulatorService;
         }
         [HttpGet]
-        public IActionResult Hitung(int? id)
+        public async Task<IActionResult> Hitung(int? id)
         {
             var viewModel = new KalkulatorViewModel
             {
-                //ambil data dari database untuk di tampilkan di table
-                DaftarRiwayat = _context.KalkulatorModel.ToList()
+                // 1. Ambil semua riwayat dari Service (sudah berupa DTO)
+                DaftarRiwayat = await _kalkulatorService.GetAllAsync()
             };
-            //jika ada parameter id dari url + user klik edit = ambil data lamanya
+            // 2. Jika ada id, ambil data untuk mode edit
             if (id.HasValue && id.Value > 0)
             {
-                var dataEdit = _context.KalkulatorModel.Find(id.Value);
+                var dataEdit = await _kalkulatorService.GetForEditAsync(id.Value);
                 if (dataEdit != null)
                 {
                     viewModel.IsEdit = true;
@@ -32,7 +34,7 @@ namespace proj01.Data
             }
             else 
             {
-                viewModel.FormModel = new KalkulatorModel();
+                viewModel.FormModel = new HitungRequestDto();
                 viewModel.IsEdit = false;
             }
             return View(viewModel);
@@ -40,60 +42,28 @@ namespace proj01.Data
 
         [HttpPost]
         //method untuk olah data
-        public IActionResult Hitung(KalkulatorViewModel viewModel)
+        public async Task<IActionResult> Hitung(KalkulatorViewModel viewModel)
         {
-            var data = viewModel.FormModel;
-            if (data != null)
+            // Validasi dasar dari atribut [Required] di HitungRequestDto
+            if (viewModel.FormModel != null)
             {
-                switch (data.Operasi)
-                {
-                    case "+":
-                    data.Hasil = data.Angkasatu + data.Angkadua;
-                    break;
-                    case "-":
-                    data.Hasil = data.Angkasatu - data.Angkadua;
-                    break;
-                    case "*":
-                    data.Hasil = data.Angkasatu * data.Angkadua;
-                    break;
-                    case "/":
-                    data.Hasil = data.Angkadua != 0 ? data.Angkasatu / data.Angkadua : 0;
-                    break;
-                    default:
-                    data.Hasil = 0;
-                    break;
-                }
-    #pragma warning restore CS8602 // Dereference of a possibly null reference.
-                if (data.Id == 0)
-                {
-                    //jika id=0 input data baru
-                    _context.KalkulatorModel.Add(data);
-                }
-                else
-                {
-                    //jika id > 0 kenanya update
-                    _context.KalkulatorModel.Update(data);
-                }
-                _context.SaveChanges();
+                // Panggil Service untuk hitung + simpan
+                await _kalkulatorService.HitungAsync(viewModel.FormModel);
             }
-            viewModel.IsEdit = false;
+            // Reset form & redirect agar tidak double-submit saat refresh
             ModelState.Clear();
             return RedirectToAction("Hitung", new { id = (int?)null });
         }
         [HttpDelete]
         [ValidateAntiForgeryToken]
         //method untuk hapus
-        public IActionResult Hapus(int Id)
+        public async Task<IActionResult> Hapus(int Id)
         {
-            Console.WriteLine($"Hapus Di panggil dengan id : {Id}");
-            var data = _context.KalkulatorModel.Find(Id);
-            if (data == null)
+            var berhasil = await _kalkulatorService.HapusAsync(Id);
+            if (!berhasil)
             {
-                Console.WriteLine($"Data dengan id {Id} TIDAK DI TEMUKAN");
                 return NotFound();
             }
-            _context.KalkulatorModel.Remove(data);
-            _context.SaveChanges();
             return Ok();
         }
     }

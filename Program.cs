@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using proj01.Data;
+using proj01.Repositories.Implementations;
+using proj01.Repositories.Interfaces;
+using proj01.Services.Implementations;
+using proj01.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,6 +12,8 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IKalkulatorRepository, KalkulatorRepository>();
+builder.Services.AddScoped<IKalkulatorService, KalkulatorService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

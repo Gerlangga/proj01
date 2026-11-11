@@ -1,5 +1,5 @@
 
-@model proj01.Models.KalkulatorViewModel
+@model proj01.DTOs.Kalkulator.KalkulatorViewModel
 
 <p>@Model.IsEdit</p>
 <title>Kalkulator</title>
@@ -49,10 +49,11 @@
         </tr>
     </table>
     </form>
-    @if(Model.FormModel.Hasil != 0 || Model.FormModel.Id > 0)
+    @if(Model.DaftarRiwayat != null && Model.DaftarRiwayat.Any())
     {
+        var hasilTerakhir = Model.DaftarRiwayat.First().Hasil;
         <div class="alert alert-info mt-4 text-center">
-            <h4>Hasil : @Model.FormModel.Hasil</h4>
+            <h4>Hasil Terakhir: @hasilTerakhir</h4>
         </div>
     }
     <hr class="my-5">
